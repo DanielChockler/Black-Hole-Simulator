@@ -9,45 +9,51 @@ c :: Float
 c = 3.0e8
 
 type Position = (Float, Float)
+type Velocity = (Float, Float)
 type Mass = Float
 
-data BlackHole = BlackHole {
-    position :: Position,
+data BlackHoleData = BlackHoleData {
+    bh_position :: Position,
     mass :: Mass,
     radius :: Float
 }
 
-data Ray = Ray {
-	position :: Position
+data RayData = RayData {
+	ray_position :: Position,
+    velocty :: Velocity
 }
 
-data Object = Ray | BlackHole
+data Object = Ray RayData | BlackHole BlackHoleData
 
 type Model = [Object]
 
-createBlackHole :: Position -> Mass -> BlackHole
-createBlackHole pos m = BlackHole {
-    position = pos,
+createBlackHole :: Position -> Mass -> BlackHoleData
+createBlackHole pos m = BlackHoleData {
+    bh_position = pos,
     mass = m,
     radius = (2 * g * m) / (c ** 2)
 }
 
-window :: Display
-window = InWindow "Black Hole" (1500, 1000) (0, 0)
+createRay :: Position -> Velocity -> RayData
+createRay pos v = RayData {
+    velocty = v,
+	ray_position = pos
+}
 
-background :: Color
-background = black
 
 draw :: Model -> Picture
-draw [x]    | isBlackHole x = _
-            | isRay x       = _
-draw (x:xs) | isBlackHole x = _
-            | isRay x       = _
+draw []                     = Blank
+draw (x:xs) = pictures (drawObject x : [draw xs])
     where
-    isBlackHole 
+    drawObject (BlackHole bh) = translate (fst (bh_position bh)) (snd (bh_position bh)) $ color red $ circleSolid (radius bh)
+    drawObject (Ray ray)      = translate (fst (ray_position ray)) (snd (ray_position ray)) $ color white $ circleSolid 5
 
-blackhole :: BlackHole
-blackhole = createBlackHole (100, 100) 5.39e28
+blackhole :: Object
+blackhole = BlackHole (createBlackHole (100, 100) 5.39e28)
+
+ray :: Object
+ray = Ray (createRay (0, 0) (10, 10))
 
 main :: IO ()
-main = display window background (draw [blackhole])
+main = display (InWindow "Window" (1500, 1500) (0, 0)) black (draw [blackhole, ray])
+
