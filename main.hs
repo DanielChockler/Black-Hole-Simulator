@@ -2,6 +2,9 @@ import Graphics.Gloss
 import System.Random
 import System.IO.Unsafe
 
+playback_rate :: Float
+playback_rate = 1.0
+
 g :: Float
 g = 6.6743e-11
 
@@ -9,7 +12,7 @@ c :: Float
 c = 3.0e8
 
 type Position = (Float, Float)
-type Velocity = (Float, Float)
+type Direction = (Float, Float)
 type Mass = Float
 
 data BlackHoleData = BlackHoleData {
@@ -20,7 +23,7 @@ data BlackHoleData = BlackHoleData {
 
 data RayData = RayData {
 	ray_position :: Position,
-    velocty :: Velocity
+    direction :: Direction
 }
 
 data Object = Ray RayData | BlackHole BlackHoleData
@@ -34,12 +37,11 @@ createBlackHole pos m = BlackHoleData {
     radius = (2 * g * m) / (c ** 2)
 }
 
-createRay :: Position -> Velocity -> RayData
-createRay pos v = RayData {
-    velocty = v,
-	ray_position = pos
+createRay :: Position -> Direction -> RayData
+createRay pos d = RayData {
+    ray_position = pos,
+    direction = d
 }
-
 
 draw :: Model -> Picture
 draw []                     = Blank
@@ -48,12 +50,14 @@ draw (x:xs) = pictures (drawObject x : [draw xs])
     drawObject (BlackHole bh) = translate (fst (bh_position bh)) (snd (bh_position bh)) $ color red $ circleSolid (radius bh)
     drawObject (Ray ray)      = translate (fst (ray_position ray)) (snd (ray_position ray)) $ color white $ circleSolid 5
 
-blackhole :: Object
-blackhole = BlackHole (createBlackHole (100, 100) 5.39e28)
+update vp dt model = [updateRay (model !! 1) (dt * playback_rate) model]
 
-ray :: Object
-ray = Ray (createRay (0, 0) (10, 10))
+updateRay :: Object -> Float -> Model -> Object
+updateRay (Ray rd) dt model = Ray (createRay ((fst (ray_position rd)) + ((fst (direction rd)) * c)), (snd (ray_position rd) + ((snd (direction rd)) * c)), (direction rd))
+
+initial :: Model
+initial = [BlackHole (createBlackHole (100, 100) 5.39e28), Ray (createRay (100, 10) (1, 0))]
 
 main :: IO ()
-main = display (InWindow "Window" (1500, 1500) (0, 0)) black (draw [blackhole, ray])
+main = simulate (InWindow "Window" (1500, 1500) (0, 0)) black 30 initial draw update
 
