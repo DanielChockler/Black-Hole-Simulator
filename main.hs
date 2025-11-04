@@ -14,6 +14,9 @@ g = 6.6743e-11
 c :: Float
 c = 3.0e8
 
+r_s :: Float
+r_s = (2 * g * 5.39e28) / (c ** 2)
+
 type Position = (Float, Float)
 type Direction = (Float, Float)
 type Trail = [Position]
@@ -48,7 +51,7 @@ createBlackHole pos m = BlackHoleData {
 createRay :: Position -> Direction -> Trail -> RayData
 createRay pos d t = RayData {
     ray_position_cartesian = pos,
-    ray_position_polar = ((fst pos) * (fst pos) + (snd pos) * (snd pos), atan ((snd pos) / (fst pos))),
+    ray_position_polar = (sqrt((fst pos) * (fst pos) + (snd pos) * (snd pos)), atan ((snd pos) / (fst pos))),
     direction = d,
     trail = t
 }
@@ -70,7 +73,7 @@ draw (x:xs) = pictures (drawObject x : [draw xs])
 
 update vp dt model = map updateObject model
     where
-    updateObject (Ray rd) = updateRay (Ray rd) (dt * playback_rate) model
+    updateObject (Ray rd)       = updateRay (Ray rd) (dt * playback_rate) model
     updateObject (BlackHole bh) = (BlackHole bh)
 
 updateRay :: Object -> Float -> Model -> Object
@@ -78,15 +81,16 @@ updateRay (Ray rd) dt model = Ray (createRay newPos (direction rd) updatedTrail)
     where
     currentPos = ray_position_cartesian rd
     currentDir = direction rd
-    newPos = (fst currentPos + fst currentDir * c * dt * coefficient,
-              snd currentPos + snd currentDir * c * dt * coefficient)
+    newPos | fst (ray_position_polar rd) > r_s = (fst currentPos + fst currentDir * c * dt * coefficient,
+                                                 snd currentPos + snd currentDir * c * dt * coefficient)
+           | otherwise                         = currentPos
     updatedTrail = (trail rd) ++ [currentPos]
 
 lightRow :: Int -> Model
-lightRow n = [Ray (createRay (-200, -100 + 25 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+lightRow n = [Ray (createRay (-200, -200 + 25 * fromIntegral x) (1, 0) []) | x <- [0..n]]
 
 initial :: Model
-initial = BlackHole (createBlackHole (0, 0) 5.39e28) : lightRow 9
+initial = BlackHole (createBlackHole (0, 0) 5.39e28) : lightRow 15
 
 main :: IO ()
 main = simulate (InWindow "Window" (1500, 1500) (0, 0)) black 30 initial draw update
