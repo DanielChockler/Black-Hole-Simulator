@@ -6,7 +6,7 @@ playback_rate :: Float
 playback_rate = 1.0
 
 coefficient :: Float
-coefficient = 5.0e-7
+coefficient = 9.0e-10
 
 g :: Float
 g = 6.6743e-11
@@ -27,8 +27,14 @@ data BlackHoleData = BlackHoleData {
 }
 
 data RayData = RayData {
+    -- Cartesian Coords (x, y)
     ray_position_cartesian :: Position,
+
+    -- Polar Coords (r, phi)
     ray_position_polar :: Position,
+    ray_velocity_polar :: Direction,
+
+
     direction :: Direction,
     trail :: [Position]
 }
@@ -45,13 +51,37 @@ createBlackHole pos m = BlackHoleData {
     radius = (2 * g * m) / (c ** 2)
 }
 
-createRay :: Position -> Direction -> Trail -> RayData
-createRay pos d t = RayData {
+createRay :: Position -> Direction -> Trail -> Float -> RayData
+createRay pos d t r_s = RayData {
     ray_position_cartesian = pos,
-    ray_position_polar = (sqrt((fst pos) * (fst pos) + (snd pos) * (snd pos)), atan ((snd pos) / (fst pos))),
+    ray_position_polar = (sqrt((fst pos) * (fst pos) + (snd pos) * (snd pos)), atan2 (snd pos) (fst pos)),
+    ray_velocity_polar = cartesianToPolarDirection pos d r_s,
     direction = d,
     trail = t
 }
+
+cartesianToPolarDirection :: Position -> Direction -> Float -> Direction
+cartesianToPolarDirection (x, y) (dx, dy) r_s =
+    let r    = sqrt (x * x + y * y)
+        phi  = atan2 y x
+
+        dr   = (dx * x + dy * y) / r
+        dphi = (dx * (-y) + dy * x) / (r * r)
+
+    in (dr, dphi)
+
+geodesic :: Position -> Direction -> Float -> Direction
+geodesic (x, y) (dx, dy) r_s =
+    let r    = sqrt (x * x + y * y)
+        phi  = atan2 y x
+
+        dr   = (dx * x + dy * y) / r
+        dphi = (dx * (-y) + dy * x) / (r * r)
+
+        d2r = r * dphi * dphi - (c * c * r_s) / (2.0 * r * r)
+        d2phi = -2.0 * dr * dphi / r
+
+    in (d2r, d2phi)
 
 draw :: Model -> Picture
 draw []     = Blank
@@ -74,21 +104,40 @@ update vp dt model = map updateObject model
     updateObject (BlackHole bh) = (BlackHole bh)
 
 updateRay :: Object -> Float -> Model -> Object
-updateRay (Ray rd) dt model = Ray (createRay newPos (direction rd) updatedTrail)
+updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail r_s)
     where
-    currentPos = ray_position_cartesian rd
-    currentDir = direction rd
     eventHorizons = [radius bh | BlackHole bh <- model]
-    newPos | any (\eventhorizon -> fst (ray_position_polar rd) <= eventhorizon) eventHorizons = currentPos
-           | otherwise                                                                        = (fst currentPos + fst currentDir * c * dt * coefficient,
-                                                                                                 snd currentPos + snd currentDir * c * dt * coefficient)
+    r_s = if null eventHorizons then 0 else head eventHorizons
+
+    (r, phi) = ray_position_polar rd
+    (dr, dphi) = ray_velocity_polar rd
+
+    (d2r, d2phi) = geodesic (ray_position_cartesian rd) (direction rd) r_s
+
+    newdr = dr + d2r  * dt * coefficient
+    newdphi = dphi + d2phi  * dt * coefficient
+
+    newr = r + newdr * c * dt * coefficient
+    newPhi = phi + newdphi * c * dt * coefficient
+
+    currentPos = ray_position_cartesian rd
+    newPos | any (\eventhorizon -> r <= eventhorizon) eventHorizons = currentPos
+           | otherwise                                              = (cos(newPhi) * newr,
+                                                                       sin(newPhi) * newr)
+
+    newDirection = (cos(newPhi) * newdr - newr * sin(newPhi) * newdphi,
+                    sin(newPhi) * newdr + newr * cos(newPhi) * newdphi)
+
     updatedTrail = (trail rd) ++ [currentPos]
 
-lightRow :: Int -> Model
-lightRow n = [Ray (createRay (-200, -200 + 25 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+lightRow :: Int -> Float -> Model
+lightRow n r_s = [Ray (createRay (-500, -400 + 30 * fromIntegral x) (0.5, 0.3) [] r_s) | x <- [0..n]]
 
 initial :: Model
-initial = BlackHole (createBlackHole (0, 0) 5.39e28) : lightRow 15
+initial = 
+    let bh  = createBlackHole (0, 0) 5.39e28
+        r_s = radius bh
+    in BlackHole bh : lightRow 25 r_s
 
 main :: IO ()
 main = simulate (InWindow "Window" (1500, 1500) (0, 0)) black 30 initial draw update
