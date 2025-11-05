@@ -14,9 +14,6 @@ g = 6.6743e-11
 c :: Float
 c = 3.0e8
 
-r_s :: Float
-r_s = (2 * g * 5.39e28) / (c ** 2)
-
 type Position = (Float, Float)
 type Direction = (Float, Float)
 type Trail = [Position]
@@ -81,9 +78,10 @@ updateRay (Ray rd) dt model = Ray (createRay newPos (direction rd) updatedTrail)
     where
     currentPos = ray_position_cartesian rd
     currentDir = direction rd
-    newPos | fst (ray_position_polar rd) > r_s = (fst currentPos + fst currentDir * c * dt * coefficient,
-                                                 snd currentPos + snd currentDir * c * dt * coefficient)
-           | otherwise                         = currentPos
+    eventHorizons = [radius bh | BlackHole bh <- model]
+    newPos | any (\eventhorizon -> fst (ray_position_polar rd) <= eventhorizon) eventHorizons = currentPos
+           | otherwise                                                                        = (fst currentPos + fst currentDir * c * dt * coefficient,
+                                                                                                 snd currentPos + snd currentDir * c * dt * coefficient)
     updatedTrail = (trail rd) ++ [currentPos]
 
 lightRow :: Int -> Model
