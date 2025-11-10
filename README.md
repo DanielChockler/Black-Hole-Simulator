@@ -1,24 +1,31 @@
-# Black Hole Simulation
+# Black Hole Simulator
 
-## How the simulation was developed
-Simulating how the path of light rays are affected by a single or multiple black holes.
-Since light is without mass, the path of light cannot be determined by gravitational attraction, instead the path of light is altered by the warping of space-time due to the black hole.
-Therefore the path of the light rays was found by calculating the geodesic path of the light rays
+A simulation of light ray paths affected by black holes using geodesic calculations in curved space-time.
 
-## How to run
-Clone the repository
+## About
+
+This simulator models how black holes warp space-time and alter the path of light rays. Since light is massless, its trajectory is determined by geodesic paths through curved space-time rather than gravitational attraction.
+
+## Getting Started
+
+**Clone the repository:**
 ```console
-foo@bar:~$ git clone https://github.com/DanielChockler/Black-Hole-Simulator
-foo@bar:~$ cd Black-Hole-Simulator
+git clone https://github.com/DanielChockler/Black-Hole-Simulator
+cd Black-Hole-Simulator
 ```
 
-Install dependencies
+**Install dependencies:**
 ```console
-foo@bar:~$ cabal install gloss
+cabal install gloss
 ```
 
-Compile and run code
+**Run the simulation:**
 ```console
-foo@bar:~$ ghc -O2 -threaded -dynamic main.hs
-foo@bar:~$ ./main
+ghc -O2 -threaded -dynamic main.hs
+./main
 ```
+
+## Features
+- Single and multiple black hole simulations
+- Real-time visualization using Gloss
+- Geodesic path calculations for light rays
