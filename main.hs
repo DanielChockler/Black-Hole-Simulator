@@ -37,24 +37,35 @@ playback_rate = 1.0
 
 -- Arbitrary coefficant: increase to increase the speed of light rays
 coefficient :: Float
-coefficient = 200
+coefficient = 150
+
+-- Single black hole simulation with light rays coming as a row
+simulation = singleBlackHole ++ lightRow 30
+
+-- Single black hole simulation with light rays coming from a single point
+-- simulation = singleBlackHole ++ lightFromSinglePoint 30
 
 -- Two black hole simulation with light rays coming as a row
 
 -- Black holes horizontally next to each other
--- simulation = binaryBlackHoles1 ++ lightRow 25
+-- simulation = binaryBlackHoles1 ++ lightRow 30
 
 -- Black holes vertically next to each other
---simulation = binaryBlackHoles2 ++ lightRow 25
+-- simulation = binaryBlackHoles2 ++ lightRow 30
 
 -- Two black hole simulation with light rays coming from a single point
 -- Black holes horizontally next to each other
--- simulation = binaryBlackHoles1 ++ lightFromSinglePoint 25
+-- simulation = binaryBlackHoles1 ++ lightFromSinglePoint 30
 
 -- Black holes vertically next to each other
--- simulation = binaryBlackHoles2 ++ lightFromSinglePoint 25
+-- simulation = binaryBlackHoles2 ++ lightFromSinglePoint 30
 
-simulation = threeBlackHoles ++ lightRow 25
+-- Three black hole simulation with light rays coming as a row
+
+-- simulation = threeBlackHoles ++ lightRow 30
+
+-- Three black hole simulation with light rays coming from a single point
+-- simulation = threeBlackHoles ++ lightFromSinglePoint 30
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Don't change below
@@ -178,8 +189,11 @@ lightRow n = [Ray (createRay (-700, -550 + 30 * fromIntegral x) (1, 0) []) | x <
 lightFromSinglePoint :: Int -> Model
 lightFromSinglePoint n = 
     let step = (pi / 3) / fromIntegral (n - 1)
-        angles = [-pi/12 + step * fromIntegral i | i <- [0..n-1]]
-    in [Ray (createRay (-600, -200) (cos (angle), sin (angle)) []) | angle <- angles]
+        angles = [-pi/18 + step * fromIntegral i | i <- [0..n-1]]
+    in [Ray (createRay (-800, -550) (cos (angle), sin (angle)) []) | angle <- angles]
+
+singleBlackHole :: Model
+singleBlackHole = [BlackHole (createBlackHole (0, 0) 50)]
 
 binaryBlackHoles1 :: Model
 binaryBlackHoles1 = [BlackHole (createBlackHole (-200, 0) 50), BlackHole (createBlackHole (200, 0) 50)]
@@ -195,4 +209,3 @@ initial = simulation
 
 main :: IO ()
 main = simulate (InWindow "Window" (1500, 1500) (0, 0)) (makeColorI 23 8 41 0) 30 initial draw update
-
