@@ -9,6 +9,11 @@ playback_rate = 1.0
 coefficient :: Float
 coefficient = 200
 
+simulation = binaryBlackHoles2 ++ lightRow 25
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Don't change below
+
 type Position = (Float, Float)
 type Direction = (Float, Float)
 type Trail = [Position]
@@ -22,15 +27,7 @@ data BlackHoleData = BlackHoleData {
 }
 
 data RayData = RayData {
-    -- Cartesian Coords (x, y)
     ray_position_cartesian :: Position,
-
-    -- Polar Coords (r, phi)
-    ray_position_polar :: Position,
-    ray_velocity_polar :: Direction,
-
-    impact_parameter :: Float,
-
     direction :: Direction,
     trail :: [Position]
 }
@@ -47,54 +44,44 @@ createBlackHole pos m = BlackHoleData {
     radius = 2.0 * m
 }
 
-createRay :: Position -> Direction -> Trail -> Float -> RayData
-createRay pos d t r_s = 
-    let r = sqrt((fst pos) * (fst pos) + (snd pos) * (snd pos))
-        phi = atan2 (snd pos) (fst pos)
-        
-        (dr, dphi) = cartesianToPolarVelocity pos d
+createRay :: Position -> Direction -> Trail -> RayData
+createRay pos d t = RayData {
+    ray_position_cartesian = pos,
+    direction = d,
+    trail = t
+}
 
-        b = if abs dr > 1e-6 
-            then r * r * dphi / dr 
-            else r * r * dphi * 1e6
+deflectionFromBlackHole :: Position -> Direction -> BlackHoleData -> (Float, Float)
+deflectionFromBlackHole rayPos (dx, dy) bh =
+    let bhPos = bh_position_cartesian bh
+        m = mass bh
+        r_s = radius bh
         
-    in RayData {
-        ray_position_cartesian = pos,
-        ray_position_polar = (r, phi),
-        ray_velocity_polar = (dr, dphi),
-        impact_parameter = b,
-        direction = d,
-        trail = t
-    }
-
-cartesianToPolarVelocity :: Position -> Direction -> Direction
-cartesianToPolarVelocity (x, y) (dx, dy) =
-    let r = sqrt (x * x + y * y)
-        dr = (dx * x + dy * y) / r
-        dphi = (x * dy - y * dx) / (r * r)
-    in (dr, dphi)
-
-geodesic :: Position -> Direction -> Float -> Float -> Direction
-geodesic (r, phi) (dr, dphi) r_s b =
-    let m = r_s / 2.0
-        f = 1.0 - r_s / r
+        (rel_x, rel_y) = (fst rayPos - fst bhPos, snd rayPos - snd bhPos)
+        r = sqrt (rel_x * rel_x + rel_y * rel_y)
         
-        f_safe = max f 0.01
-
-        d2r = if r > r_s * 1.1 then
-                  - (m / (r * r)) * (dr * dr) / f_safe
-                  + (r - 3.0 * m) * (dphi * dphi) * f_safe
-              else
-                  0.0
-        d2phi = -2.0 * dr * dphi / r
+        r_safe = max r (r_s * 1.1)
         
-    in (d2r, d2phi)
+        (unit_x, unit_y) = (rel_x / r_safe, rel_y / r_safe)
+        
+        f = 1.0 - r_s / r_safe
+        gr_factor = (1.0 + r_s / r_safe) / max f 0.1
+        
+        accel_magnitude = if r > r_s * 1.1 then
+                              - (m / (r_safe * r_safe)) * gr_factor
+                          else
+                              0.0
+        
+        ax = accel_magnitude * (unit_x)
+        ay = accel_magnitude * (unit_y)
+        
+    in (ax, ay)
 
 draw :: Model -> Picture
 draw []     = Blank
 draw (x:xs) = pictures (drawObject x : [draw xs])
     where
-    drawObject (BlackHole bh) = translate (fst (bh_position_cartesian bh)) (snd (bh_position_cartesian bh)) $ color red $ circleSolid (radius bh)
+    drawObject (BlackHole bh) = translate (fst (bh_position_cartesian bh)) (snd (bh_position_cartesian bh)) $ color black $ circleSolid (radius bh)
     drawObject (Ray ray)      = pictures ([translate (fst (ray_position_cartesian ray)) (snd (ray_position_cartesian ray)) $ color white $ circleSolid 1] ++ drawTrail (reverse (take 100 (reverse (trail ray)))))
         where
         drawTrail :: Trail -> [Picture]
@@ -111,44 +98,53 @@ update vp dt model = map updateObject model
     updateObject (BlackHole bh) = (BlackHole bh)
 
 updateRay :: Object -> Float -> Model -> Object
-updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail r_s)
+updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
     where
-    eventHorizons = [radius bh | BlackHole bh <- model]
-    r_s = if null eventHorizons then 0 else head eventHorizons
-
-    (r, phi) = ray_position_polar rd
-    (dr, dphi) = ray_velocity_polar rd
-    b = impact_parameter rd
-
-    (d2r, d2phi) = geodesic (r, phi) (dr, dphi) r_s b
-
-    newdr = dr + d2r * dt * coefficient 
-    newdphi = dphi + d2phi * dt * coefficient 
-
-    newr = r + newdr * dt * coefficient
-    newPhi = phi + newdphi * dt * coefficient
-
-    currentPos = ray_position_cartesian rd
+    blackHoles = [bh | BlackHole bh <- model]
     
-    newPos | any (\eventhorizon -> r <= eventhorizon) eventHorizons = currentPos
-           | newr <= r_s = currentPos
-           | otherwise = (cos(newPhi) * newr, sin(newPhi) * newr)
-
-    newDirection = (cos(newPhi) * newdr - newr * sin(newPhi) * newdphi,
-                    sin(newPhi) * newdr + newr * cos(newPhi) * newdphi)
-
+    currentPos = ray_position_cartesian rd
+    (dx, dy) = direction rd
+    
+    accelerations = map (deflectionFromBlackHole currentPos (dx, dy)) blackHoles
+    (total_ax, total_ay) = foldl (\(ax1, ay1) (ax2, ay2) -> (ax1 + ax2, ay1 + ay2)) (0.0, 0.0) accelerations
+    
+    newdx = dx + total_ax * dt * coefficient
+    newdy = dy + total_ay * dt * coefficient
+    
+    (x, y) = currentPos
+    newx = x + newdx * dt * coefficient
+    newy = y + newdy * dt * coefficient
+    
+    insideHorizon = any (\bh -> 
+        let (rel_x, rel_y) = (fst currentPos - fst (bh_position_cartesian bh), 
+                               snd currentPos - snd (bh_position_cartesian bh))
+            r = sqrt (rel_x * rel_x + rel_y * rel_y)
+        in r <= radius bh) blackHoles
+    
+    newPos | insideHorizon = currentPos
+           | otherwise = (newx, newy)
+    
+    newDirection = (newdx, newdy)
     updatedTrail = (trail rd) ++ [currentPos]
 
-lightRow :: Int -> Float -> Model
-lightRow n r_s = [Ray (createRay (-500, -400 + 30 * fromIntegral x) (1, 0) [] r_s) | x <- [0..n]]
- 
+lightRow :: Int -> Model
+lightRow n = [Ray (createRay (-500, -550 + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+
+lightFromSinglePoint :: Int -> Model
+lightFromSinglePoint n = 
+    let step = (pi / 3) / fromIntegral (n - 1)
+        angles = [-pi/12 + step * fromIntegral i | i <- [0..n-1]]
+    in [Ray (createRay (-600, -200) (cos (angle), sin (angle)) []) | angle <- angles]
+
+binaryBlackHoles1 :: Model
+binaryBlackHoles1 = [BlackHole (createBlackHole (-200, 0) 50), BlackHole (createBlackHole (200, 0) 50)]
+
+binaryBlackHoles2 :: Model
+binaryBlackHoles2 = [BlackHole (createBlackHole (0, 200) 50), BlackHole (createBlackHole (0, -200) 50)]
+
 initial :: Model
-initial = 
-    let
-        m = 50.0
-        bh  = createBlackHole (0, 0) m
-        r_s = radius bh
-    in BlackHole bh : lightRow 25 r_s
+initial = simulation
 
 main :: IO ()
-main = simulate (InWindow "Window" (1500, 1500) (0, 0)) black 30 initial draw update
+main = simulate (InWindow "Window" (1500, 1500) (0, 0)) (makeColorI 23 8 41 0) 30 initial draw update
+
