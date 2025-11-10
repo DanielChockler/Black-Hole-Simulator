@@ -9,6 +9,11 @@ playback_rate = 1.0
 coefficient :: Float
 coefficient = 200
 
+simulation = binaryBlackHoles2 ++ lightRow 25
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Don't change below
+
 type Position = (Float, Float)
 type Direction = (Float, Float)
 type Trail = [Position]
@@ -125,18 +130,20 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
 lightRow :: Int -> Model
 lightRow n = [Ray (createRay (-500, -550 + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
 
+lightFromSinglePoint :: Int -> Model
+lightFromSinglePoint n = 
+    let step = (pi / 3) / fromIntegral (n - 1)
+        angles = [-pi/12 + step * fromIntegral i | i <- [0..n-1]]
+    in [Ray (createRay (-600, -200) (cos (angle), sin (angle)) []) | angle <- angles]
+
+binaryBlackHoles1 :: Model
+binaryBlackHoles1 = [BlackHole (createBlackHole (-200, 0) 50), BlackHole (createBlackHole (200, 0) 50)]
+
+binaryBlackHoles2 :: Model
+binaryBlackHoles2 = [BlackHole (createBlackHole (0, 200) 50), BlackHole (createBlackHole (0, -200) 50)]
+
 initial :: Model
-initial = 
-    let
-        m1 = 50.0
-        m2 = 30.0
-        m3 = 40.0
-        
-        bh1 = createBlackHole (0, 0) m1
-        bh2 = createBlackHole (300, 200) m2
-        bh3 = createBlackHole (-200, -100) m3
-        
-    in [BlackHole bh1, BlackHole bh2, BlackHole bh3] ++ lightRow 25
+initial = simulation
 
 main :: IO ()
 main = simulate (InWindow "Window" (1500, 1500) (0, 0)) (makeColorI 23 8 41 0) 30 initial draw update
