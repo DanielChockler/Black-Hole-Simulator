@@ -1,6 +1,4 @@
 import Graphics.Gloss
-import System.Random
-import System.IO.Unsafe
 
 {-
  _   _           _        _ _   ____  _            _      _   _       _        ____  _                 _       _             
@@ -36,6 +34,7 @@ playback_rate :: Float
 playback_rate = 1.0
 
 -- Arbitrary coefficant: increase to increase the speed of light rays
+-- Better not to change this value
 coefficient :: Float
 coefficient = 150
 
