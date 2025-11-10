@@ -25,6 +25,14 @@ ghc -O2 -threaded -dynamic main.hs
 ./main
 ```
 
+**Change the simulation:**
+Comment and uncomment lines in main.hs to change the type of simulation showing
+NOTE: ensure that only one line beginning with 
+```
+simulation =
+```
+is uncommented
+
 ## Features
 - Single and multiple black hole simulations
 - Real-time visualization using Gloss
