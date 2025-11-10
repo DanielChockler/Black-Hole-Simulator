@@ -38,6 +38,12 @@ playback_rate = 1.0
 coefficient :: Float
 coefficient = 150
 
+-- x and y of where the light rays for lightRow begin
+lightRowBegin = (-400, -550)
+
+-- x and y of where the light rays for lightFromSinglePoint begin
+lightPointBegin = (-800, -550)
+
 -- Single black hole simulation with light rays coming as a row
 simulation = singleBlackHole ++ lightRow 30
 
@@ -183,13 +189,13 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
     updatedTrail = (trail rd) ++ [currentPos]
 
 lightRow :: Int -> Model
-lightRow n = [Ray (createRay (-700, -550 + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+lightRow n = [Ray (createRay (fst lightRowBegin, snd lightRowBegin + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
 
 lightFromSinglePoint :: Int -> Model
 lightFromSinglePoint n = 
     let step = (pi / 3) / fromIntegral (n - 1)
         angles = [-pi/18 + step * fromIntegral i | i <- [0..n-1]]
-    in [Ray (createRay (-800, -550) (cos (angle), sin (angle)) []) | angle <- angles]
+    in [Ray (createRay lightPointBegin (cos (angle), sin (angle)) []) | angle <- angles]
 
 singleBlackHole :: Model
 singleBlackHole = [BlackHole (createBlackHole (0, 0) 50)]
