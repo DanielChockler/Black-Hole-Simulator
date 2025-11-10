@@ -2,14 +2,59 @@ import Graphics.Gloss
 import System.Random
 import System.IO.Unsafe
 
+{-
+ _   _           _        _ _   ____  _            _      _   _       _        ____  _                 _       _             
+| | | | __ _ ___| | _____| | | | __ )| | __ _  ___| | __ | | | | ___ | | ___  / ___|(_)_ __ ___  _   _| | __ _| |_ ___  _ __ 
+| |_| |/ _` / __| |/ / _ \ | | |  _ \| |/ _` |/ __| |/ / | |_| |/ _ \| |/ _ \ \___ \| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|
+|  _  | (_| \__ \   <  __/ | | | |_) | | (_| | (__|   <  |  _  | (_) | |  __/  ___) | | | | | | | |_| | | (_| | || (_) | |   
+|_| |_|\__,_|___/_|\_\___|_|_| |____/|_|\__,_|\___|_|\_\ |_| |_|\___/|_|\___| |____/|_|_| |_| |_|\__,_|_|\__,_|\__\___/|_|   
+
+
+by Daniel Chockler
+
+Dependancies:
+
+    Gloss
+    https://hackage.haskell.org/package/gloss
+
+    to install:
+    cabal install gloss
+
+How to run:
+    Compile with
+    ghc -O2 -threaded -dynamic main.hs
+
+    run
+    ./main
+
+Uncomment and change values below to create different simulations
+
+-}
+
+-- Controls simulation speed (e.g. playback_rate = 0.5 for half speed)
 playback_rate :: Float
 playback_rate = 1.0
 
--- arbitrary coefficant: increase to increase the speed of light rays
+-- Arbitrary coefficant: increase to increase the speed of light rays
 coefficient :: Float
 coefficient = 200
 
-simulation = binaryBlackHoles2 ++ lightRow 25
+-- Two black hole simulation with light rays coming as a row
+
+-- Black holes horizontally next to each other
+-- simulation = binaryBlackHoles1 ++ lightRow 25
+
+-- Black holes vertically next to each other
+--simulation = binaryBlackHoles2 ++ lightRow 25
+
+-- Two black hole simulation with light rays coming from a single point
+-- Black holes horizontally next to each other
+-- simulation = binaryBlackHoles1 ++ lightFromSinglePoint 25
+
+-- Black holes vertically next to each other
+-- simulation = binaryBlackHoles2 ++ lightFromSinglePoint 25
+
+simulation = threeBlackHoles ++ lightRow 25
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Don't change below
@@ -128,7 +173,7 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
     updatedTrail = (trail rd) ++ [currentPos]
 
 lightRow :: Int -> Model
-lightRow n = [Ray (createRay (-500, -550 + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+lightRow n = [Ray (createRay (-700, -550 + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
 
 lightFromSinglePoint :: Int -> Model
 lightFromSinglePoint n = 
@@ -141,6 +186,9 @@ binaryBlackHoles1 = [BlackHole (createBlackHole (-200, 0) 50), BlackHole (create
 
 binaryBlackHoles2 :: Model
 binaryBlackHoles2 = [BlackHole (createBlackHole (0, 200) 50), BlackHole (createBlackHole (0, -200) 50)]
+
+threeBlackHoles :: Model
+threeBlackHoles = [BlackHole (createBlackHole (-400, -200) 40), BlackHole (createBlackHole (0, 0) 50), BlackHole (createBlackHole (200, -300) 30)]
 
 initial :: Model
 initial = simulation
