@@ -31,12 +31,12 @@ Uncomment and change values below to create different simulations
 
 -- Controls simulation speed (e.g. playback_rate = 0.5 for half speed)
 playback_rate :: Float
-playback_rate = 1.0
+playback_rate = 1.3
 
 -- Arbitrary coefficant: increase to increase the speed of light rays
 -- Better not to change this value
 coefficient :: Float
-coefficient = 150
+coefficient = 80
 
 -- x and y of where the light rays for lightRow begin
 lightRowBegin = (-400, -550)
@@ -121,17 +121,14 @@ deflectionFromBlackHole rayPos (dx, dy) bh =
         (rel_x, rel_y) = (fst rayPos - fst bhPos, snd rayPos - snd bhPos)
         r = sqrt (rel_x * rel_x + rel_y * rel_y)
         
-        r_safe = max r (r_s * 1.1)
+        r_safe = max r (r_s * 1.01) 
         
         (unit_x, unit_y) = (rel_x / r_safe, rel_y / r_safe)
         
         f = 1.0 - r_s / r_safe
-        gr_factor = (1.0 + r_s / r_safe) / max f 0.1
+        gr_factor = (1.0 + r_s / r_safe) / max f 0.01 
         
-        accel_magnitude = if r > r_s * 1.1 then
-                              - (m / (r_safe * r_safe)) * gr_factor
-                          else
-                              0.0
+        accel_magnitude = - (m / (r_safe * r_safe)) * gr_factor
         
         ax = accel_magnitude * (unit_x)
         ay = accel_magnitude * (unit_y)
@@ -143,7 +140,7 @@ draw []     = Blank
 draw (x:xs) = pictures (drawObject x : [draw xs])
     where
     drawObject (BlackHole bh) = translate (fst (bh_position_cartesian bh)) (snd (bh_position_cartesian bh)) $ color black $ circleSolid (radius bh)
-    drawObject (Ray ray)      = pictures ([translate (fst (ray_position_cartesian ray)) (snd (ray_position_cartesian ray)) $ color white $ circleSolid 1] ++ drawTrail (reverse (take 100 (reverse (trail ray)))))
+    drawObject (Ray ray)      = pictures ([translate (fst (ray_position_cartesian ray)) (snd (ray_position_cartesian ray)) $ color white $ circleSolid 1] ++ drawTrail (reverse (trail ray)))
         where
         drawTrail :: Trail -> [Picture]
         drawTrail positions | length positions < 2 = []
@@ -186,7 +183,7 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
            | otherwise = (newx, newy)
     
     newDirection = (newdx, newdy)
-    updatedTrail = (trail rd) ++ [currentPos]
+    updatedTrail = take 150 (currentPos : trail rd)
 
 lightRow :: Int -> Model
 lightRow n = [Ray (createRay (fst lightRowBegin, snd lightRowBegin + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
@@ -213,4 +210,4 @@ initial :: Model
 initial = simulation
 
 main :: IO ()
-main = simulate (InWindow "Window" (1500, 1500) (0, 0)) (makeColorI 23 8 41 0) 30 initial draw update
+main = simulate (InWindow "Window" (1500, 1500) (0, 0)) (makeColorI 23 8 41 0) 200 initial draw update
