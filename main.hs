@@ -39,10 +39,10 @@ coefficient :: Float
 coefficient = 80
 
 -- x and y of where the light rays for lightRow begin
-lightRowBegin = (-400, -365)
+lightRowBegin = (-700, -465)
 
 -- x and y of where the light rays for lightFromSinglePoint begin
-lightPointBegin = (-800, -550)
+lightPointBegin = (-700, -300)
 
 -- Single black hole simulation with light rays coming as a row
 simulation = singleBlackHole ++ lightRow 40
@@ -118,6 +118,7 @@ deflectionFromBlackHole rayPos (dx, dy) bh =
         m = mass bh
         r_s = radius bh
         
+        -- cartesian coordinates relative from the black hole
         (rel_x, rel_y) = (fst rayPos - fst bhPos, snd rayPos - snd bhPos)
         r = sqrt (rel_x * rel_x + rel_y * rel_y)
         
@@ -130,6 +131,7 @@ deflectionFromBlackHole rayPos (dx, dy) bh =
         
         accel_magnitude = - (m / (r_safe * r_safe)) * gr_factor
         
+        -- cartesian acceleration
         ax = accel_magnitude * (unit_x)
         ay = accel_magnitude * (unit_y)
         
@@ -147,6 +149,7 @@ draw (x:xs) = pictures (drawObject x : [draw xs])
                             | otherwise            = zipWith3 (drawSegment (length positions)) (init positions) (tail positions) [0..]
 
         drawSegment totalLength pos1 pos2 i =
+            -- higher transparency for the least recent positions
             let alpha = fromIntegral i / fromIntegral totalLength
             in color (makeColor 1.0 1.0 1.0 alpha) $ line [pos1, pos2]
 
@@ -183,6 +186,8 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
            | otherwise = (newx, newy)
     
     newDirection = (newdx, newdy)
+
+    -- draw trail from the 150 most recent positions
     updatedTrail = take 150 (currentPos : trail rd)
 
 lightRow :: Int -> Model
