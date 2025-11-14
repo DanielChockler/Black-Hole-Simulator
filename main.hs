@@ -39,13 +39,13 @@ coefficient :: Float
 coefficient = 80
 
 -- x and y of where the light rays for lightRow begin
-lightRowBegin = (-400, -550)
+lightRowBegin = (-400, -365)
 
 -- x and y of where the light rays for lightFromSinglePoint begin
 lightPointBegin = (-800, -550)
 
 -- Single black hole simulation with light rays coming as a row
-simulation = singleBlackHole ++ lightRow 30
+simulation = singleBlackHole ++ lightRow 40
 
 -- Single black hole simulation with light rays coming from a single point
 -- simulation = singleBlackHole ++ lightFromSinglePoint 30
@@ -186,7 +186,7 @@ updateRay (Ray rd) dt model = Ray (createRay newPos newDirection updatedTrail)
     updatedTrail = take 150 (currentPos : trail rd)
 
 lightRow :: Int -> Model
-lightRow n = [Ray (createRay (fst lightRowBegin, snd lightRowBegin + 30 * fromIntegral x) (1, 0) []) | x <- [0..n]]
+lightRow n = [Ray (createRay (fst lightRowBegin, snd lightRowBegin + 20 * fromIntegral x) (1, 0) []) | x <- [0..n]]
 
 lightFromSinglePoint :: Int -> Model
 lightFromSinglePoint n = 
